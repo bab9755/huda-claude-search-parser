@@ -29,7 +29,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["injected.js"],
+      "resources": ["injected.js", "config.js"],
       "matches": ["https://claude.ai/*"]
     }
   ]
