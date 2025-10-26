@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {
+      width: 350px;
+      min-height: 400px;
+      margin: 0;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f8f9fa;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid #007bff;
+    }
+    
+    .header h1 {
+      margin: 0;
+      color: #007bff;
+      font-size: 18px;
+    }
+    
+    .status {
+      background: #e9ecef;
+      padding: 10px;
+      border-radius: 5px;
+      margin-bottom: 15px;
+      text-align: center;
+    }
+    
+    .status.active {
+      background: #d4edda;
+      color: #155724;
+    }
+    
+    .status.inactive {
+      background: #f8d7da;
+      color: #721c24;
+    }
+    
+    .stats {
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      margin-bottom: 15px;
+    }
+    
+    .stat-item {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      padding: 5px 0;
+      border-bottom: 1px solid #f1f3f4;
+    }
+    
+    .stat-item:last-child {
+      border-bottom: none;
+    }
+    
+    .stat-label {
+      font-weight: 500;
+      color: #495057;
+    }
+    
+    .stat-value {
+      font-weight: 600;
+      color: #007bff;
+    }
+    
+    .actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    
+    .btn {
+      padding: 12px 20px;
+      border: none;
+      border-radius: 6px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+    }
+    
+    .btn-primary {
+      background: #007bff;
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background: #0056b3;
+    }
+    
+    .btn-secondary {
+      background: #6c757d;
+      color: white;
+    }
+    
+    .btn-secondary:hover {
+      background: #545b62;
+    }
+    
+    .btn-success {
+      background: #28a745;
+      color: white;
+    }
+    
+    .btn-success:hover {
+      background: #1e7e34;
+    }
+    
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    
+    .loading {
+      display: none;
+      text-align: center;
+      margin: 10px 0;
+    }
+    
+    .spinner {
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid #007bff;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .settings {
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 1px solid #dee2e6;
+    }
+    
+    .settings h3 {
+      margin: 0 0 10px 0;
+      font-size: 14px;
+      color: #495057;
+    }
+    
+    .setting-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    
+    .setting-label {
+      font-size: 12px;
+      color: #6c757d;
+    }
+    
+    .toggle {
+      position: relative;
+      width: 40px;
+      height: 20px;
+      background: #ccc;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    
+    .toggle.active {
+      background: #007bff;
+    }
+    
+    .toggle::after {
+      content: '';
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      background: white;
+      border-radius: 50%;
+      top: 2px;
+      left: 2px;
+      transition: transform 0.3s;
+    }
+    
+    .toggle.active::after {
+      transform: translateX(20px);
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🔍 Claude Search Parser</h1>
+  </div>
+  
+  <div id="status" class="status inactive">
+    <div id="statusText">Not monitoring Claude</div>
+  </div>
+  
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <div>Processing...</div>
+  </div>
+  
+  <div class="stats" id="stats" style="display: none;">
+    <div class="stat-item">
+      <span class="stat-label">Conversations Analyzed:</span>
+      <span class="stat-value" id="conversationCount">0</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">Total Searches:</span>
+      <span class="stat-value" id="totalSearches">0</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">URLs Discovered:</span>
+      <span class="stat-value" id="totalUrls">0</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">Citations Used:</span>
+      <span class="stat-value" id="totalCitations">0</span>
+    </div>
+  </div>
+  
+  <div class="actions">
+    <button id="extractBtn" class="btn btn-primary" disabled>
+      📊 Extract Current Data
+    </button>
+    
+    <button id="viewDataBtn" class="btn btn-secondary">
+      📋 View Collected Data
+    </button>
+    
+    <button id="exportBtn" class="btn btn-success">
+      💾 Export to CSV
+    </button>
+  </div>
+  
+  <div class="settings">
+    <h3>Settings</h3>
+    <div class="setting-item">
+      <span class="setting-label">Auto-extract</span>
+      <div class="toggle" id="autoExtractToggle"></div>
+    </div>
+    <div class="setting-item">
+      <span class="setting-label">Show notifications</span>
+      <div class="toggle" id="notificationsToggle"></div>
+    </div>
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html>
