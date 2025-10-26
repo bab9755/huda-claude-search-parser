@@ -1137,22 +1137,94 @@ class ClaudeDataExtractor {
 
   async saveToDatabase(data) {
     try {
-      // Send data to background script for processing and saving
-      const response = await chrome.runtime.sendMessage({
-        action: 'saveData',
-        data: data
+      // Load Supabase config
+      const configResponse = await fetch(chrome.runtime.getURL('config.js'));
+      const configText = await configResponse.text();
+      
+      // Parse config without using eval() to avoid CSP issues
+      const urlMatch = configText.match(/url:\s*['"`]([^'"`]+)['"`]/);
+      const keyMatch = configText.match(/anonKey:\s*['"`]([^'"`]+)['"`]/);
+      
+      if (!urlMatch || !keyMatch) {
+        throw new Error('Could not parse Supabase config');
+      }
+      
+      const config = {
+        url: urlMatch[1],
+        anonKey: keyMatch[1]
+      };
+      
+      // Transform data to match Supabase table schema
+      const supabaseData = this.transformDataForSupabase(data);
+      
+      // Save directly to Supabase
+      const response = await fetch(`${config.url}/rest/v1/claude_search_data`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': config.anonKey,
+          'Authorization': `Bearer ${config.anonKey}`,
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify(supabaseData)
       });
 
-      if (response.success) {
-        alert('✅ Data saved successfully!');
+      if (response.ok) {
+        alert('✅ Data saved to Supabase successfully!');
         document.body.removeChild(document.getElementById('claude-parser-modal'));
       } else {
-        alert('❌ Error saving data: ' + response.error);
+        const errorText = await response.text();
+        throw new Error(`Supabase error: ${response.status} - ${errorText}`);
       }
     } catch (error) {
       console.error('Error saving data:', error);
       alert('❌ Error saving data: ' + error.message);
     }
+  }
+
+  transformDataForSupabase(data) {
+    const metrics = data.metrics || {};
+    
+    return {
+      conversation_id: data.conversationId,
+      timestamp: data.timestamp,
+      
+      // Basic metrics
+      search_count: metrics.searchCount || 0,
+      total_urls_discovered: metrics.totalUrlsDiscovered || 0,
+      unique_domains: metrics.uniqueDomains || 0,
+      citations_used: metrics.citationsUsed || 0,
+      citation_ratio: metrics.citationRatio || 0,
+      final_response_length: metrics.finalResponseLength || 0,
+      
+      // High priority metrics
+      search_refinement_rate: metrics.searchRefinementRate || 0,
+      citation_density: metrics.citationDensity || 0,
+      average_domain_authority: metrics.averageDomainAuthority || 0,
+      total_domains_with_citations: metrics.totalDomainsWithCitations || 0,
+      search_query_similarity: metrics.searchQuerySimilarity || 0,
+      
+      // Timeline metrics
+      avg_time_between_searches: metrics.timelineMetrics?.averageTimeBetweenSearches || 0,
+      min_time_between_searches: metrics.timelineMetrics?.minTimeBetweenSearches || 0,
+      max_time_between_searches: metrics.timelineMetrics?.maxTimeBetweenSearches || 0,
+      search_acceleration: metrics.timelineMetrics?.searchAcceleration || 0,
+      
+      // Domain performance
+      most_cited_domain: metrics.mostCitedDomain || null,
+      least_cited_domain: metrics.leastCitedDomain || null,
+      
+      // JSON fields
+      search_queries: metrics.searchQueries || [],
+      domain_list: metrics.domainList || [],
+      domain_inclusion_rate: metrics.domainInclusionRate || {},
+      domain_authority_data: metrics.domainAuthorityData || {},
+      citation_sources: metrics.citationSources || [],
+      unique_urls: metrics.uniqueUrls || [],
+      
+      // Metadata
+      query_text: metrics.queryText || null
+    };
   }
 }
 
